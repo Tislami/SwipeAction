@@ -1,8 +1,8 @@
 package com.zeroone.swipeaction.swipe_action
 
 import android.util.Log
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
+import android.view.animation.AnticipateOvershootInterpolator
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
@@ -18,14 +18,15 @@ import androidx.compose.ui.layout.*
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
+import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun HorizontalSwipeAction(
-    modifier: Modifier,
-    trailingContentThresholds : Dp?=null,
-    leadingContentThresholds : Dp?=null,
+    modifier: Modifier = Modifier,
+    trailingContentThresholds: Dp? = null,
+    leadingContentThresholds: Dp? = null,
     contentAlignment: Alignment = Alignment.CenterEnd,
     scaledBackground: Boolean = true,
     leadingContentBackgroundColor: Color? = Color.Green,
@@ -35,11 +36,13 @@ fun HorizontalSwipeAction(
     content: @Composable () -> Unit,
 ) {
 
+    val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
     var scopeHeight by remember { mutableStateOf(Dp.Unspecified) }
-    var scopeHeightPx by remember { mutableStateOf(Float.NaN ) }
+    var scopeHeightPx by remember { mutableStateOf(Float.NaN) }
     var scopeWidth by remember { mutableStateOf(Dp.Unspecified) }
     var scopeWidthPx by remember { mutableStateOf(Float.NaN) }
+
     var trailingScopeWidth by remember { mutableStateOf(Dp.Unspecified) }
     var leadingScopeWidth by remember { mutableStateOf(Dp.Unspecified) }
     var thresholdsValuePx by remember { mutableStateOf(Float.NaN) }
@@ -47,13 +50,10 @@ fun HorizontalSwipeAction(
     var startPosition by remember { mutableStateOf(Offset.Zero) }
     var currentPosition by remember { mutableStateOf(Offset.Zero) }
 
-    var isDragging by remember { mutableStateOf(false) }
-    var isTrailing by remember { mutableStateOf(false) }
-    var isLeading by remember { mutableStateOf(false) }
+    var isDraggingLeadingSide by remember { mutableStateOf(false) }
+    var isDraggingTrailingSide by remember { mutableStateOf(false) }
 
-    //var trailingScopeWidthAnimationValue = animateDpAsState(targetValue = )
-    var offsetXAnimationValue = animateFloatAsState(targetValue = thresholdsValuePx)
-
+    var backgroundColor by remember { mutableStateOf(Color.Unspecified) }
 
     BoxWithConstraints(
         modifier = modifier
@@ -67,65 +67,99 @@ fun HorizontalSwipeAction(
                 detectHorizontalDragGestures(
                     onDragEnd = {
                         if (currentPosition.x > thresholdsValuePx) {
-                            currentPosition = Offset(x = thresholdsValuePx, y = 0.0f)
-                            isDragging = false
-                            isLeading = true
+                            coroutineScope.launch {
+                                animate(
+                                    initialValue = currentPosition.x,
+                                    targetValue = thresholdsValuePx,
+                                    animationSpec = tween(
+                                        durationMillis = 500,
+                                        easing = FastOutSlowInEasing
+                                    ),
+                                    block = { val1, _ ->
+                                        currentPosition = Offset(x = val1, y = 0.0f)
+                                    }
+                                )
+                            }
+                            isDraggingLeadingSide = true
                             leadingScopeWidth = leadingContentThresholds ?: (scopeWidth / 2)
                         } else if (currentPosition.x < -thresholdsValuePx) {
-                            currentPosition = Offset(x = -thresholdsValuePx, y = 0.0f)
-                            isDragging = false
-                            isTrailing = true
+                            coroutineScope.launch {
+                                animate(
+                                    initialValue = currentPosition.x,
+                                    targetValue = -thresholdsValuePx,
+                                    animationSpec = tween(
+                                        durationMillis = 500,
+                                        easing = FastOutSlowInEasing
+                                    ),
+                                    block = { val1, _ ->
+                                        currentPosition = Offset(x = val1, y = 0.0f)
+                                    }
+                                )
+                            }
+                            isDraggingTrailingSide = true
                             trailingScopeWidth = trailingContentThresholds ?: (scopeWidth / 2)
                         } else {
-                            currentPosition = Offset.Zero
-                            isDragging = false
-                            isTrailing = false
-                            isLeading = false
+                            coroutineScope.launch {
+                                animate(
+                                    initialValue = currentPosition.x,
+                                    targetValue = 0.0f,
+                                    animationSpec = tween(
+                                        durationMillis = 500,
+                                        easing = FastOutSlowInEasing
+                                    ),
+                                    block = { val1, _ ->
+                                        currentPosition = Offset(x = val1, y = 0.0f)
+                                    }
+                                )
+                            }
+
                             trailingScopeWidth = 0.dp
                             leadingScopeWidth = 0.dp
-                            Log.d("SwipeActionTag", "HorizontalSwipeAction: nan ")
+                            backgroundColor = Color.Unspecified
+                            isDraggingLeadingSide = false
+                            isDraggingTrailingSide = false
                         }
                     },
                     onHorizontalDrag = { change, value ->
                         if (change.isConsumed) {
                             startPosition = change.previousPosition - currentPosition
                             currentPosition = change.position - startPosition
-                            Log.d("SwipeActionTag", "${trailingContent!=null}  ${leadingContent != null}  ")
-
                         }
 
-                        if (trailingContent != null) {
-                            Log.d("SwipeActionTag", "trailingContent:  ${currentPosition.x}")
-                            if (currentPosition.x < 0) {
-                                Log.d("SwipeActionTag", "trailingContent:  ${currentPosition.x}")
-                                isDragging = true
+                        if (currentPosition.x < 0) {
+                            isDraggingLeadingSide = false
+                            Log.d(
+                                "SwipeActionTag",
+                                " currentPosition -> ${currentPosition.x} ")
+                            if (trailingContent != null) {
+                                backgroundColor =
+                                    trailingContentBackgroundColor ?: Color.Unspecified
                                 currentPosition = change.position - startPosition
+                                isDraggingTrailingSide = true
                                 thresholdsValuePx =
                                     trailingContentThresholds?.toPx() ?: (scopeWidth / 2).toPx()
                                 trailingScopeWidth -= value.toDp()
                             }
                         }
-                        if (leadingContent != null) {
-                            Log.d("SwipeActionTag", "leadingContent:  ${currentPosition.x}")
-                            if (currentPosition.x > 0) {
-                                Log.d("SwipeActionTag", "leadingContent:  ${currentPosition.x}")
-                                isDragging = true
+                        if (currentPosition.x > 0) {
+                            isDraggingTrailingSide = false
+                            if (leadingContent != null) {
+                                backgroundColor =
+                                    leadingContentBackgroundColor ?: Color.Unspecified
                                 currentPosition = change.position - startPosition
+                                isDraggingLeadingSide = true
                                 thresholdsValuePx =
                                     leadingContentThresholds?.toPx() ?: (scopeWidth / 2).toPx()
                                 leadingScopeWidth += value.toDp()
                             }
                         }
-
-
                     }
                 )
             }
-            .background(trailingContentBackgroundColor ?: Color.Transparent),
+            .background(backgroundColor),
         propagateMinConstraints = false,
         contentAlignment = contentAlignment
     ) {
-
         Box(
             contentAlignment = Alignment.CenterStart,
             content = { content() },
@@ -135,7 +169,7 @@ fun HorizontalSwipeAction(
         )
 
         if (trailingContent != null) {
-            if (isDragging || isTrailing) {
+            if (isDraggingTrailingSide) {
                 Box(
                     content = { trailingContent() },
                     modifier = Modifier
@@ -144,14 +178,13 @@ fun HorizontalSwipeAction(
                         .widthIn(max = if (scaledBackground) scopeWidth else Dp.Unspecified)
                         .width(trailingScopeWidth)
                         .graphicsLayer(translationX = scopeWidthPx + currentPosition.x)
-                        .background(leadingContentBackgroundColor ?: Color.Unspecified)
+                        .background(trailingContentBackgroundColor ?: Color.Unspecified)
                 )
             }
         }
 
-
         if (leadingContent != null) {
-            if (isDragging || isLeading) {
+            if (isDraggingLeadingSide) {
                 Box(
                     content = { leadingContent() },
                     modifier = Modifier
@@ -163,6 +196,5 @@ fun HorizontalSwipeAction(
                 )
             }
         }
-
     }
 }

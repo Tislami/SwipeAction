@@ -6,13 +6,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.runtime.*
@@ -20,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,7 +57,8 @@ fun Greeting(name: String) {
             .background(Color.Gray)
             .fillMaxSize()
             .padding(horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = "Todo List 📝",
@@ -65,21 +69,62 @@ fun Greeting(name: String) {
 
 
 
+       /* HorizontalSwipeAction(
+            modifier = Modifier.clip(RoundedCornerShape(25)),
+            content = { ItemContent(title = items[0],modifier = Modifier.fillMaxWidth()) },
+            leadingContent = { LeadingContent() },
+            trailingContent = { TrailingContent2() },
+            )
+
         HorizontalSwipeAction(
             modifier = Modifier.clip(RoundedCornerShape(25)),
             content = { ItemContent(title = items[0]) },
             leadingContent = { LeadingContent() },
             trailingContent = { TrailingContent2() },
-            )
+        )*/
+
+        HorizontalSwipeAction(
+            modifier = Modifier
+                .clip(RoundedCornerShape(25)),
+            content = {
+                      Surface(
+                          modifier = Modifier
+                              .clip(RoundedCornerShape(25)).fillMaxWidth(),
+                          shape = RoundedCornerShape(16.dp)) {
+                          Image(
+                              painter = painterResource(id = R.drawable.image_1,),
+                              contentDescription =null ,
+                              contentScale = ContentScale.Crop
+                          )
+                      }
+            },
+            leadingContentBackgroundColor = Color.Blue,
+            leadingContentThresholds = 60.dp,
+            trailingContentThresholds = 60.dp,
+            trailingContentBackgroundColor = Color.Red,
+            leadingContent = {
+
+                IconButton(
+                    onClick = { /*TODO*/ }) {
+                    Icon(imageVector = Icons.Default.Share, contentDescription = null)
+                }
+                             },
+            trailingContent = {
+                IconButton(
+                    onClick = { /*TODO*/ }) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+                }
+                              },
+        )
 
         Divider()
         Spacer(modifier = Modifier.height(25.dp))
 
 
-        HorizontalSwipeAction(
+       /* HorizontalSwipeAction(
             modifier = Modifier.clip(CircleShape),
-            trailingContentThresholds = 25.dp,
-            leadingContentThresholds = 25.dp,
+            trailingContentThresholds = 50.dp,
+            leadingContentThresholds = 50.dp,
             trailingContentBackgroundColor = Color.Red,
             leadingContentBackgroundColor = Color.Blue,
             trailingContent = { TrailingContent2() },
@@ -87,16 +132,30 @@ fun Greeting(name: String) {
             content = { ItemContent2() }
         )
 
+        HorizontalSwipeAction(
+            modifier = Modifier.clip(CircleShape),
+            leadingContentThresholds = 50.dp,
+            leadingContent = { LeadingContent() },
+            content = { ItemContent2() }
+        )
+
+        HorizontalSwipeAction(
+            modifier = Modifier.clip(CircleShape),
+            trailingContentThresholds = 50.dp,
+            trailingContentBackgroundColor = Color.Red,
+            trailingContent = { TrailingContent2() },
+            content = { ItemContent2() }
+        )*/
+
     }
 }
 
 
 @Composable
-fun ItemContent(title: String) {
+fun ItemContent(title: String,modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .background(Color.Black)
-            .fillMaxWidth()
             .height(100.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
