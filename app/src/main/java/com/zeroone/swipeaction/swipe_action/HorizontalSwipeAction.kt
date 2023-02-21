@@ -1,7 +1,5 @@
 package com.zeroone.swipeaction.swipe_action
 
-import android.util.Log
-import android.view.animation.AnticipateOvershootInterpolator
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.*
@@ -19,18 +17,17 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun HorizontalSwipeAction(
     modifier: Modifier = Modifier,
-    trailingContentThresholds: Dp? = null,
-    leadingContentThresholds: Dp? = null,
-    contentAlignment: Alignment = Alignment.CenterEnd,
-    scaledBackground: Boolean = true,
-    leadingContentBackgroundColor: Color? = Color.Green,
-    trailingContentBackgroundColor: Color? = Color.Green,
+    trailingContentSize: Dp? = null,
+    leadingContentSize: Dp? = null,
+    leadingContentBackgroundColor: Color? = null,
+    trailingContentBackgroundColor: Color? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     leadingContent: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
@@ -46,6 +43,9 @@ fun HorizontalSwipeAction(
     var trailingScopeWidth by remember { mutableStateOf(Dp.Unspecified) }
     var leadingScopeWidth by remember { mutableStateOf(Dp.Unspecified) }
     var thresholdsValuePx by remember { mutableStateOf(Float.NaN) }
+
+    var offsetX by remember { mutableStateOf(Dp.Unspecified) }
+    var offsetXPx by remember { mutableStateOf(Float.NaN) }
 
     var startPosition by remember { mutableStateOf(Offset.Zero) }
     var currentPosition by remember { mutableStateOf(Offset.Zero) }
@@ -81,7 +81,7 @@ fun HorizontalSwipeAction(
                                 )
                             }
                             isDraggingLeadingSide = true
-                            leadingScopeWidth = leadingContentThresholds ?: (scopeWidth / 2)
+                            leadingScopeWidth = leadingContentSize ?: (scopeWidth / 2)
                         } else if (currentPosition.x < -thresholdsValuePx) {
                             coroutineScope.launch {
                                 animate(
@@ -97,7 +97,7 @@ fun HorizontalSwipeAction(
                                 )
                             }
                             isDraggingTrailingSide = true
-                            trailingScopeWidth = trailingContentThresholds ?: (scopeWidth / 2)
+                            trailingScopeWidth = trailingContentSize ?: (scopeWidth / 2)
                         } else {
                             coroutineScope.launch {
                                 animate(
@@ -128,17 +128,16 @@ fun HorizontalSwipeAction(
 
                         if (currentPosition.x < 0) {
                             isDraggingLeadingSide = false
-                            Log.d(
-                                "SwipeActionTag",
-                                " currentPosition -> ${currentPosition.x} ")
                             if (trailingContent != null) {
                                 backgroundColor =
                                     trailingContentBackgroundColor ?: Color.Unspecified
                                 currentPosition = change.position - startPosition
                                 isDraggingTrailingSide = true
                                 thresholdsValuePx =
-                                    trailingContentThresholds?.toPx() ?: (scopeWidth / 2).toPx()
+                                    trailingContentSize?.toPx() ?: (scopeWidth / 2).toPx()
                                 trailingScopeWidth -= value.toDp()
+                                offsetX += abs(value).toDp()
+                                offsetXPx += abs(value)
                             }
                         }
                         if (currentPosition.x > 0) {
@@ -149,7 +148,7 @@ fun HorizontalSwipeAction(
                                 currentPosition = change.position - startPosition
                                 isDraggingLeadingSide = true
                                 thresholdsValuePx =
-                                    leadingContentThresholds?.toPx() ?: (scopeWidth / 2).toPx()
+                                    leadingContentSize?.toPx() ?: (scopeWidth / 2).toPx()
                                 leadingScopeWidth += value.toDp()
                             }
                         }
@@ -157,8 +156,6 @@ fun HorizontalSwipeAction(
                 )
             }
             .background(backgroundColor),
-        propagateMinConstraints = false,
-        contentAlignment = contentAlignment
     ) {
         Box(
             contentAlignment = Alignment.CenterStart,
@@ -174,8 +171,8 @@ fun HorizontalSwipeAction(
                     content = { trailingContent() },
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .heightIn(max = if (scaledBackground) scopeHeight else Dp.Unspecified)
-                        .widthIn(max = if (scaledBackground) scopeWidth else Dp.Unspecified)
+                        .heightIn(max = scopeHeight)
+                        .widthIn(max = scopeWidth)
                         .width(trailingScopeWidth)
                         .graphicsLayer(translationX = scopeWidthPx + currentPosition.x)
                         .background(trailingContentBackgroundColor ?: Color.Unspecified)
@@ -189,8 +186,8 @@ fun HorizontalSwipeAction(
                     content = { leadingContent() },
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .heightIn(max = if (scaledBackground) scopeHeight else Dp.Unspecified)
-                        .widthIn(max = if (scaledBackground) scopeWidth else Dp.Unspecified)
+                        .heightIn(max = scopeHeight)
+                        .widthIn(max = scopeWidth)
                         .width(leadingScopeWidth)
                         .background(leadingContentBackgroundColor ?: Color.Unspecified)
                 )
